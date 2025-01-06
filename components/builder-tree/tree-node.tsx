@@ -37,9 +37,7 @@ export function TreeNode({
   const children = node.children || node.blocks || [];
 
   const tagName = node.tagName === "img" ? "Image" : node.tagName;
-
   const name = node.component?.name === "Core:Section" ? "Section" : node.component?.name ||  node.layerName || node.name || tagName || 'Box';
-
   const displayName = node.layerName || name || node.name || tagName || 'Unnamed Component';
 
   const isTextComponent = displayName === 'Text';
@@ -69,7 +67,7 @@ export function TreeNode({
         <ContextMenuTrigger>
           <div 
             className={cn(
-              "flex items-center gap-1 px-2 py-1 cursor-pointer rounded-md transition-colors",
+              "flex items-center gap-1 px-2 py-1 cursor-pointer rounded-md transition-colors group/item",
               isSelected && "bg-primary/10 hover:bg-primary/20",
               isHovered && !isSelected && "bg-accent",
               !isHovered && !isSelected && "hover:bg-accent"
@@ -84,35 +82,62 @@ export function TreeNode({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            {hasChildren && (
+            <div className="flex items-center flex-1">
+              {hasChildren && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-0 h-4 w-4 hover:bg-transparent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(!isExpanded);
+                  }}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              
+              {getIcon(displayName)}
+              
+              <div className="flex flex-col ml-2">
+                <span className="text-sm">
+                  {displayName}
+                </span>
+                {textContent && (
+                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    {textContent}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-0 h-4 w-4 hover:bg-transparent"
+                className="h-6 w-6 p-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsExpanded(!isExpanded);
+                  setIsCodeModalOpen(true);
                 }}
               >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
+                <Code className="h-3.5 w-3.5" />
               </Button>
-            )}
-            
-            {getIcon(displayName)}
-            
-            <div className="flex flex-col">
-              <span className="text-sm">
-                {displayName}
-              </span>
-              {textContent && (
-                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                  {textContent}
-                </span>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(node.id);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
         </ContextMenuTrigger>

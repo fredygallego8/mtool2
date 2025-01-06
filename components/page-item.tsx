@@ -25,14 +25,19 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
   const { toast } = useToast();
 
   const handleSave = async () => {
+    if (!blocks.length) {
+      toast({
+        title: "Error",
+        description: "Cannot save empty blocks",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const response = await updatePageBlocks(page.id, blocks);
+      const response = await updatePageBlocks(page.id, blocks, page.data);
       setApiResponse(response);
-      toast({
-        title: "Success",
-        description: "Page saved successfully",
-      });
     } catch (error) {
       toast({
         title: "Error",
@@ -47,41 +52,58 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
 
   const handleUpdateNode = async (nodeId: string, newData: any) => {
     try {
-      const updateBlocksRecursively = (blocks: any[]): any[] => {
-        return blocks.map(block => {
-          if (block.id === nodeId) {
-            return newData;
-          }
-          if (block.children?.length > 0) {
-            return {
-              ...block,
-              children: updateBlocksRecursively(block.children)
-            };
-          }
-          if (block.blocks?.length > 0) {
-            return {
-              ...block,
-              blocks: updateBlocksRecursively(block.blocks)
-            };
-          }
-          return block;
-        });
-      };
+      if (newData === null) {
+        // Handle node deletion
+        const filterNodes = (nodes: any[]): any[] => {
+          return nodes.filter(block => {
+            if (block.id === nodeId) return false;
+            if (block.children?.length > 0) {
+              const filteredChildren = filterNodes(block.children);
+              block.children = filteredChildren.length > 0 ? filteredChildren : undefined;
+            }
+            if (block.blocks?.length > 0) {
+              const filteredBlocks = filterNodes(block.blocks);
+              block.blocks = filteredBlocks.length > 0 ? filteredBlocks : undefined;
+            }
+            return true;
+          });
+        };
 
-      const updatedBlocks = updateBlocksRecursively([...blocks]);
-      setBlocks(updatedBlocks);
-      
-      toast({
-        title: "Success",
-        description: "Block updated successfully",
-      });
+        const updatedBlocks = filterNodes([...blocks]);
+        setBlocks(updatedBlocks);
+      } else {
+        // Handle node update
+        const updateBlocksRecursively = (nodes: any[]): any[] => {
+          return nodes.map(block => {
+            if (block.id === nodeId) {
+              return newData;
+            }
+            if (block.children?.length > 0) {
+              return {
+                ...block,
+                children: updateBlocksRecursively(block.children)
+              };
+            }
+            if (block.blocks?.length > 0) {
+              return {
+                ...block,
+                blocks: updateBlocksRecursively(block.blocks)
+              };
+            }
+            return block;
+          });
+        };
+
+        const updatedBlocks = updateBlocksRecursively([...blocks]);
+        setBlocks(updatedBlocks);
+      }
     } catch (error) {
+      console.error('Failed to update node:', error);
       toast({
         title: "Error",
-        description: "Failed to update block",
+        description: "Failed to update component",
         variant: "destructive",
       });
-      throw error;
     }
   };
 
@@ -91,7 +113,7 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
         <div className="flex items-center gap-2">
           <PageStatus published={page.published} />
           <h2 className="font-medium group-hover:text-primary">
-            {page.data.title} ({page.name}) - {page.id}- {page.data.url}
+            {page.data.title} ({page.name}) - {page.id} - {page.data.url}
           </h2>
           <EditTitle
             id={page.id}
@@ -101,13 +123,13 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
+          <Button 
+            variant="outline" 
             size="sm"
             onClick={() => setIsModalOpen(true)}
-            className="gap-2"
+            disabled={isSaving || !blocks.length}
           >
-            <Save className="h-4 w-4" />
+            <Save className="h-4 w-4 mr-2" />
             Save Page
           </Button>
           <PreviewLink previewUrl={page.meta?.lastPreviewUrl} />
@@ -123,10 +145,12 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
       </div>
 
       {blocks?.length > 0 && (
-        <TreeView 
-          blocks={blocks}
-          onUpdateNode={handleUpdateNode}
-        />
+        <div className="w-full">
+          <TreeView 
+            blocks={blocks}
+            onUpdateNode={handleUpdateNode}
+          />
+        </div>
       )}
 
       <SavePageModal

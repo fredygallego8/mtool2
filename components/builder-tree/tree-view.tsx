@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TreeNode } from './tree-node';
 import { JsonPreview } from './json-preview';
@@ -14,6 +14,10 @@ export function TreeView({ blocks, onUpdateNode }: TreeViewProps) {
   const [localBlocks, setLocalBlocks] = useState(blocks);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
 
+  useEffect(() => {
+    setLocalBlocks(blocks);
+  }, [blocks]);
+
   const handleNodeSelect = (nodeId: string) => {
     setSelectedNodeId(nodeId);
   };
@@ -22,13 +26,22 @@ export function TreeView({ blocks, onUpdateNode }: TreeViewProps) {
     const filterNodes = (nodes: any[]): any[] => {
       return nodes.filter(node => {
         if (node.id === nodeId) return false;
-        if (node.children) node.children = filterNodes(node.children);
-        if (node.blocks) node.blocks = filterNodes(node.blocks);
+        if (node.children?.length > 0) {
+          const filteredChildren = filterNodes(node.children);
+          node.children = filteredChildren.length > 0 ? filteredChildren : undefined;
+        }
+        if (node.blocks?.length > 0) {
+          const filteredBlocks = filterNodes(node.blocks);
+          node.blocks = filteredBlocks.length > 0 ? filteredBlocks : undefined;
+        }
         return true;
       });
     };
 
     const updatedBlocks = filterNodes([...localBlocks]);
+    if (onUpdateNode) {
+      onUpdateNode(nodeId, null); // Signal deletion to parent
+    }
     setLocalBlocks(updatedBlocks);
     setSelectedNodeId(undefined);
   };
@@ -39,31 +52,36 @@ export function TreeView({ blocks, onUpdateNode }: TreeViewProps) {
 
   const handleJsonUpdate = async (newData: any) => {
     if (!selectedNodeId || !onUpdateNode) return;
-    await onUpdateNode(selectedNodeId, newData);
     
-    const updateBlocksRecursively = (blocks: any[]): any[] => {
-      return blocks.map(block => {
-        if (block.id === selectedNodeId) {
-          return newData;
-        }
-        if (block.children?.length > 0) {
-          return {
-            ...block,
-            children: updateBlocksRecursively(block.children)
-          };
-        }
-        if (block.blocks?.length > 0) {
-          return {
-            ...block,
-            blocks: updateBlocksRecursively(block.blocks)
-          };
-        }
-        return block;
-      });
-    };
+    try {
+      await onUpdateNode(selectedNodeId, newData);
+      
+      const updateBlocksRecursively = (blocks: any[]): any[] => {
+        return blocks.map(block => {
+          if (block.id === selectedNodeId) {
+            return newData;
+          }
+          if (block.children?.length > 0) {
+            return {
+              ...block,
+              children: updateBlocksRecursively(block.children)
+            };
+          }
+          if (block.blocks?.length > 0) {
+            return {
+              ...block,
+              blocks: updateBlocksRecursively(block.blocks)
+            };
+          }
+          return block;
+        });
+      };
 
-    const updatedBlocks = updateBlocksRecursively([...localBlocks]);
-    setLocalBlocks(updatedBlocks);
+      const updatedBlocks = updateBlocksRecursively([...localBlocks]);
+      setLocalBlocks(updatedBlocks);
+    } catch (error) {
+      console.error('Failed to update JSON:', error);
+    }
   };
 
   return (

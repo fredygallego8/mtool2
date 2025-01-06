@@ -9,7 +9,7 @@ export async function fetchBuilderPages() {
       params: {
         apiKey: BUILDER_CONFIG.API_KEY,
         limit: 10,
-        fields: 'data.title,name,id,lastUpdated,data.url,published,data.blocks,meta.lastPreviewUrl,url',
+        fields: 'data.title,name,id,lastUpdated,data.url,published,data.blocks,meta.lastPreviewUrl,data.html,data.css,data.jsCode,data.cssCode,data.inputs,data.httpRequests,data.customFonts,data.state,data.description',
         cachebust: true,
         model: 'page'
       },
@@ -43,12 +43,25 @@ export async function updatePageTitle(pageId: string, newTitle: string) {
   }
 }
 
-export async function updatePageBlocks(pageId: string, blocks: any[]) {
+export async function updatePageBlocks(pageId: string, blocks: any[], originalData: any) {
   try {
     const response = await axios.put(
       `${BUILDER_CONFIG.WRITE_URL}/page/${pageId}`,
       {
-        data: { blocks }
+        data: {
+          blocks,
+          html: originalData.html || '',
+          css: originalData.css || '',
+          url: originalData.url || '',
+          jsCode: originalData.jsCode || '',
+          cssCode: originalData.cssCode || '',
+          inputs: originalData.inputs || [],
+          httpRequests: originalData.httpRequests || [],
+          customFonts: originalData.customFonts || [],
+          state: originalData.state || {},
+          title: originalData.title || '',
+          description: originalData.description || ''
+        }
       },
       {
         headers: {

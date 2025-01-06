@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 
 interface Action {
   id: string;
@@ -32,10 +32,12 @@ export function SavePageModal({ isOpen, onClose, onSave, apiResponse, isSaving }
   const [actions, setActions] = useState<Action[]>([]);
   const [isComplete, setIsComplete] = useState(false);
 
+  // Start saving when modal opens
   useEffect(() => {
     if (isOpen) {
       setActions([]);
       setIsComplete(false);
+      handleSave();
     }
   }, [isOpen]);
 
@@ -140,17 +142,6 @@ export function SavePageModal({ isOpen, onClose, onSave, apiResponse, isSaving }
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             {isComplete ? 'Close' : 'Cancel'}
-          </Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={isSaving || isComplete}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>

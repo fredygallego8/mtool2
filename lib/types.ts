@@ -6,10 +6,23 @@ export interface BuilderPage {
   data: {
     title: string;
     url: string;
+    html?: string;
+    css?: string;
+    jsCode?: string;
+    cssCode?: string;
+    inputs?: any[];
+    httpRequests?: any[];
+    customFonts?: any[];
+    state?: any;
+    description?: string;
     blocks: Array<{
-      component: {
+      id?: string;
+      component?: {
         name: string;
+        options?: any;
       };
+      children?: any[];
+      blocks?: any[];
     }>;
   };
   meta?: {
