@@ -7,33 +7,13 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { FileText } from 'lucide-react';
 import { PageItem } from '@/components/page-item';
-import { BUILDER_CONFIG } from '@/lib/config/builder';
-import { ConfigModal } from '@/components/configModal';
-import { FiSettings } from 'react-icons/fi';
-import { getStoredConfig } from '../lib/config/storage';
 
 export function PageList() {
   const [pages, setPages] = useState<BuilderPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [config, setConfig] = useState(BUILDER_CONFIG);
-
-  const handleSaveConfig = (newConfig: typeof BUILDER_CONFIG) => {
-    setConfig(newConfig);
-
-    // Here you can implement the logic to save the configuration
-    console.log('New config:', newConfig);
-/*     window.location.reload();
- */
-  };
 
   useEffect(() => {
-  
-    const storedConfig = getStoredConfig();
-    if (storedConfig) {
-      setConfig(storedConfig);
-    }    
     loadPages();
   }, []);
 
@@ -62,20 +42,9 @@ export function PageList() {
 
   return (
     <div className="space-y-6">
-      <button
-        onClick={() => setIsConfigOpen(true)}
-        className="fixed top-4 right-4 p-2 rounded-full hover:bg-gray-100"
-      >
-        <FiSettings size={24} />
-      </button>      
-      <ConfigModal
-        isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
-        onSave={handleSaveConfig}
-      />      
       <div className="flex items-center gap-2">
         <FileText className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold text-primary">{config?.TITLE? config?.TITLE:""}</h1>
+        <h1 className="text-2xl font-bold text-primary">Builder.io Pages</h1>
       </div>
       
       <div className="grid gap-4">
