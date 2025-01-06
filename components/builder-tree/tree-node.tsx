@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, ChevronDown, Layout, Image as ImageIcon, Type, Columns, Link, Code, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Layout, Image as ImageIcon, Type, Columns, Link, Code, Trash2, Settings } from 'lucide-react';
 import { useState } from 'react';
 import {
   ContextMenu,
@@ -20,8 +20,8 @@ export function TreeNode({ node, level = 0 }: TreeNodeProps) {
   
   const getIcon = (displayName: string) => {
     switch (displayName) {
+      case 'Box': //or other names that require the layout icon
       case 'Core:Section':
-        return <Layout className="h-4 w-4 text-blue-500" />;
       case 'Section':
         return <Layout className="h-4 w-4 text-blue-500" />;        
       case 'Image':
@@ -31,12 +31,19 @@ export function TreeNode({ node, level = 0 }: TreeNodeProps) {
       case 'Columns':
         return <Columns className="h-4 w-4 text-orange-500" />;
       default:
-        return null;
+        return <Settings className="h-4 w-4 text-gray-500" />; // Default icon
     }
   };
 
   const handleShowCode = () => {
     console.log('Show code for:', node);
+      //Show the JSON representation of the node.  Handle potential errors.
+      try {
+        console.log(JSON.stringify(node, null, 2)); // null, 2 for pretty printing
+      } catch (error) {
+        console.error("Error stringifying node:", error);
+        alert("Could not display code.  There was an error stringifying the node data.");
+      }
   };
 
   const handleDelete = () => {

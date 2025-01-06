@@ -4,15 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TreeNode } from './tree-node';
 
 interface TreeViewProps {
-  data: any;
+  blocks: any;
 }
 
-export function TreeView({ data }: TreeViewProps) {
+export function TreeView({ blocks }: TreeViewProps) {
   return (
     <Card className="w-full max-w-md">
-      <CardContent>
+      <CardContent className="pt-10">
         <div className="space-y-2">
-          {data.data.page.map((pageData: any, index: number) => (
+          {blocks.map((pageData: any, index: number) => (
             <TreeNode key={pageData.id || index} node={pageData} />
           ))}
         </div>

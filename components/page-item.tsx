@@ -8,8 +8,16 @@ import { PreviewLink } from './preview-link';
 import { TreeView } from './builder-tree/tree-view';
 
 interface PageItemProps {
-  page: BuilderPage;
-  onTitleUpdate: (pageId: string, newTitle: string) => void;
+  page: {
+    id: string;
+    published: string;
+    data: {
+      blocks: any[]; // Update this type based on your actual blocks structure
+      title: string;
+      lastUpdated: string;
+    };
+  };
+  onTitleUpdate: (id: string, title: string) => void;
 }
 
 export function PageItem({ page, onTitleUpdate }: PageItemProps) {
@@ -51,12 +59,12 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-4">
+{/*       <p className="text-sm text-muted-foreground mb-4">
         Last updated: {new Date(page.lastUpdated).toLocaleDateString()}
-      </p>
+      </p> */}
 
       {page.data.blocks?.length > 0 && (
-        <TreeView data={treeData} />
+        <TreeView blocks={page.data.blocks} />
       )}
     </div>
   );
