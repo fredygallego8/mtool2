@@ -17,7 +17,7 @@ export function PageStatus({ published }: PageStatusProps) {
   return (
     <Tooltip>
       <TooltipTrigger>
-        <div className={`p-1 rounded-full ${isPublished ? 'text-green-500' : 'text-gray-400'}`}>
+        <div className={`p-1 rounded-full ${isPublished ? 'text-red-500' : 'text-gray-400'}`}>
           <Globe className="h-4 w-4" />
         </div>
       </TooltipTrigger>
