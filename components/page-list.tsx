@@ -42,9 +42,14 @@ export function PageList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <FileText className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold text-primary">Builder.io Pages</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileText className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold text-primary">Builder.io Pages</h1>
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {pages.length} {pages.length === 1 ? 'page' : 'pages'}
+        </span>
       </div>
       
       <div className="grid gap-4">

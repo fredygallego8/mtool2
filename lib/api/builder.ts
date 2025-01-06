@@ -9,7 +9,7 @@ export async function fetchBuilderPages() {
       params: {
         apiKey: BUILDER_CONFIG.API_KEY,
         limit: 10,
-        fields: 'data.title,name,id,lastUpdated,data.url,published,data.blocks,meta.lastPreviewUrl',
+        fields: 'data.title,name,id,lastUpdated,data.url,published,data.blocks,meta.lastPreviewUrl,url',
         cachebust: true,
         model: 'page'
       },
@@ -30,6 +30,26 @@ export async function updatePageTitle(pageId: string, newTitle: string) {
     const response = await axios.patch(
       `${BUILDER_CONFIG.WRITE_URL}/page/${pageId}`,
       { data: { title: newTitle } },
+      {
+        headers: {
+          'Authorization': `Bearer ${BUILDER_CONFIG.PRIVATE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+}
+
+export async function updatePageBlocks(pageId: string, blocks: any[]) {
+  try {
+    const response = await axios.put(
+      `${BUILDER_CONFIG.WRITE_URL}/page/${pageId}`,
+      {
+        data: { blocks }
+      },
       {
         headers: {
           'Authorization': `Bearer ${BUILDER_CONFIG.PRIVATE_KEY}`,
