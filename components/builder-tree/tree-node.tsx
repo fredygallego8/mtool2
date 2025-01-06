@@ -8,6 +8,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { CodeModal } from './code-modal';
 
 interface TreeNodeProps {
   node: any;
@@ -17,10 +18,11 @@ interface TreeNodeProps {
 export function TreeNode({ node, level = 0 }: TreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   
   const getIcon = (displayName: string) => {
     switch (displayName) {
-      case 'Box': //or other names that require the layout icon
+      case 'Box':
       case 'Core:Section':
       case 'Section':
         return <Layout className="h-4 w-4 text-blue-500" />;        
@@ -31,19 +33,12 @@ export function TreeNode({ node, level = 0 }: TreeNodeProps) {
       case 'Columns':
         return <Columns className="h-4 w-4 text-orange-500" />;
       default:
-        return <Settings className="h-4 w-4 text-gray-500" />; // Default icon
+        return <Settings className="h-4 w-4 text-gray-500" />;
     }
   };
 
   const handleShowCode = () => {
-    console.log('Show code for:', node);
-      //Show the JSON representation of the node.  Handle potential errors.
-      try {
-        console.log(JSON.stringify(node, null, 2)); // null, 2 for pretty printing
-      } catch (error) {
-        console.error("Error stringifying node:", error);
-        alert("Could not display code.  There was an error stringifying the node data.");
-      }
+    setIsCodeModalOpen(true);
   };
 
   const handleDelete = () => {
@@ -58,8 +53,7 @@ export function TreeNode({ node, level = 0 }: TreeNodeProps) {
   const hasChildren = node.children?.length > 0 || node.blocks?.length > 0;
   const children = node.children || node.blocks || [];
   const tagName = node.tagName === "img" ? "Image" : node.tagName;
-  const name = node.component?.name === "Core:Section" ? "Section" : node.component?.name ||  node.layerName || node.name || tagName || 'Box' ;
-
+  const name = node.component?.name === "Core:Section" ? "Section" : node.component?.name ||  node.layerName || node.name || tagName || 'Box';
   const displayName = node.layerName || name || node.name || tagName || 'Unnamed Component';
 
   return (
@@ -107,6 +101,13 @@ export function TreeNode({ node, level = 0 }: TreeNodeProps) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+
+      <CodeModal
+        isOpen={isCodeModalOpen}
+        onClose={() => setIsCodeModalOpen(false)}
+        code={JSON.stringify(node, null, 2)}
+        title={`Code for ${displayName}`}
+      />
 
       {isExpanded && hasChildren && (
         <div className="w-full">
