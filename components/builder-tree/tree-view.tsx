@@ -10,7 +10,7 @@ interface TreeViewProps {
 export function TreeView({ blocks }: TreeViewProps) {
   return (
     <Card className="w-full max-w-md">
-      <CardContent className="pt-10">
+      <CardContent className="pt-5">
         <div className="space-y-2">
           {blocks.map((pageData: any, index: number) => (
             <TreeNode key={pageData.id || index} node={pageData} />
