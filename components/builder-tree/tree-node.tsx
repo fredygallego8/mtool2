@@ -146,6 +146,10 @@ export function TreeNode({
             <Code className="mr-2 h-4 w-4" />
             Edit JSON
           </ContextMenuItem>
+          <ContextMenuItem onClick={() => onNodeSelect?.(node.id)}>
+            <Layout className="mr-2 h-4 w-4" />
+            Select In All Pages
+          </ContextMenuItem>
           <ContextMenuItem onClick={() => onDelete?.(node.id)} className="text-red-600">
             <Trash2 className="mr-2 h-4 w-4" />
             Delete

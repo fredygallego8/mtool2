@@ -8,12 +8,14 @@ import { JsonPreview } from './json-preview';
 interface TreeViewProps {
   blocks: any[];
   onUpdateNode?: (nodeId: string, newData: any) => Promise<void>;
+  onDeleteNode?: (nodeId: string) => void;
 }
 
-export function TreeView({ blocks, onUpdateNode }: TreeViewProps) {
+export function TreeView({ blocks, onUpdateNode, onDeleteNode }: TreeViewProps) {
   const [localBlocks, setLocalBlocks] = useState(blocks);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
 
+  // Update local blocks when props change
   useEffect(() => {
     setLocalBlocks(blocks);
   }, [blocks]);
@@ -23,26 +25,9 @@ export function TreeView({ blocks, onUpdateNode }: TreeViewProps) {
   };
 
   const handleDeleteNode = (nodeId: string) => {
-    const filterNodes = (nodes: any[]): any[] => {
-      return nodes.filter(node => {
-        if (node.id === nodeId) return false;
-        if (node.children?.length > 0) {
-          const filteredChildren = filterNodes(node.children);
-          node.children = filteredChildren.length > 0 ? filteredChildren : undefined;
-        }
-        if (node.blocks?.length > 0) {
-          const filteredBlocks = filterNodes(node.blocks);
-          node.blocks = filteredBlocks.length > 0 ? filteredBlocks : undefined;
-        }
-        return true;
-      });
-    };
-
-    const updatedBlocks = filterNodes([...localBlocks]);
-    if (onUpdateNode) {
-      onUpdateNode(nodeId, null); // Signal deletion to parent
+    if (onDeleteNode) {
+      onDeleteNode(nodeId);
     }
-    setLocalBlocks(updatedBlocks);
     setSelectedNodeId(undefined);
   };
 
@@ -55,30 +40,6 @@ export function TreeView({ blocks, onUpdateNode }: TreeViewProps) {
     
     try {
       await onUpdateNode(selectedNodeId, newData);
-      
-      const updateBlocksRecursively = (blocks: any[]): any[] => {
-        return blocks.map(block => {
-          if (block.id === selectedNodeId) {
-            return newData;
-          }
-          if (block.children?.length > 0) {
-            return {
-              ...block,
-              children: updateBlocksRecursively(block.children)
-            };
-          }
-          if (block.blocks?.length > 0) {
-            return {
-              ...block,
-              blocks: updateBlocksRecursively(block.blocks)
-            };
-          }
-          return block;
-        });
-      };
-
-      const updatedBlocks = updateBlocksRecursively([...localBlocks]);
-      setLocalBlocks(updatedBlocks);
     } catch (error) {
       console.error('Failed to update JSON:', error);
     }

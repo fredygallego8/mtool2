@@ -1,13 +1,24 @@
+'use client';
+
 import axios from 'axios';
 import { BuilderApiResponse } from '@/lib/types';
 import { handleApiError } from '@/lib/utils/error-handlers';
 import { BUILDER_CONFIG } from '@/lib/config/builder';
+import { getStoredConfig } from '@/lib/config/storage';
+
+const getConfig = () => {
+  if (typeof window !== 'undefined') {
+    return getStoredConfig() || BUILDER_CONFIG;
+  }
+  return BUILDER_CONFIG;
+};
 
 export async function fetchBuilderPages() {
+  const config = getConfig();
   try {
-    const response = await axios.get<BuilderApiResponse>(`${BUILDER_CONFIG.BASE_URL}/page`, {
+    const response = await axios.get<BuilderApiResponse>(`${config.BASE_URL}/page`, {
       params: {
-        apiKey: BUILDER_CONFIG.API_KEY,
+        apiKey: config.API_KEY,
         limit: 10,
         fields: 'data.title,name,id,lastUpdated,data.url,published,data.blocks,meta.lastPreviewUrl,data.html,data.css,data.jsCode,data.cssCode,data.inputs,data.httpRequests,data.customFonts,data.state,data.description',
         cachebust: true,
@@ -26,13 +37,14 @@ export async function fetchBuilderPages() {
 }
 
 export async function updatePageTitle(pageId: string, newTitle: string) {
+  const config = getConfig();
   try {
     const response = await axios.patch(
-      `${BUILDER_CONFIG.WRITE_URL}/page/${pageId}`,
+      `${config.WRITE_URL}/page/${pageId}`,
       { data: { title: newTitle } },
       {
         headers: {
-          'Authorization': `Bearer ${BUILDER_CONFIG.PRIVATE_KEY}`,
+          'Authorization': `Bearer ${config.PRIVATE_KEY}`,
           'Content-Type': 'application/json'
         }
       }
@@ -44,9 +56,10 @@ export async function updatePageTitle(pageId: string, newTitle: string) {
 }
 
 export async function updatePageBlocks(pageId: string, blocks: any[], originalData: any) {
+  const config = getConfig();
   try {
     const response = await axios.put(
-      `${BUILDER_CONFIG.WRITE_URL}/page/${pageId}`,
+      `${config.WRITE_URL}/page/${pageId}`,
       {
         data: {
           blocks,
@@ -65,7 +78,7 @@ export async function updatePageBlocks(pageId: string, blocks: any[], originalDa
       },
       {
         headers: {
-          'Authorization': `Bearer ${BUILDER_CONFIG.PRIVATE_KEY}`,
+          'Authorization': `Bearer ${config.PRIVATE_KEY}`,
           'Content-Type': 'application/json'
         }
       }

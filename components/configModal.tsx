@@ -1,6 +1,13 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { BUILDER_CONFIG } from '../lib/config/builder';
 import { getStoredConfig, saveConfig } from '../lib/config/storage';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ConfigModalProps {
   isOpen: boolean;
@@ -8,7 +15,7 @@ interface ConfigModalProps {
   onSave: (config: typeof BUILDER_CONFIG) => void;
 }
 
-export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
+export function ConfigModal({ isOpen, onClose, onSave }: ConfigModalProps) {
   const [config, setConfig] = useState(BUILDER_CONFIG);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +29,6 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!config.API_KEY || !config.BASE_URL) {
       setError('API Key and Base URL are required');
       return;
@@ -37,27 +43,30 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg w-96">
-        <h2 className="text-xl font-bold mb-4">Builder.io Configuration</h2>
-        {error && (
-          <div className="mb-4 p-2 bg-red-100 text-red-600 rounded">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Builder.io Configuration</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
           {Object.entries(config).map(([key, value]) => (
-            <div key={key} className="mb-4">
-              <label className="block text-sm font-medium mb-1">
+            <div key={key} className="space-y-2">
+              <Label htmlFor={key}>
                 {key}
-                {(key === 'API_KEY' || key === 'BASE_URL') && 
-                  <span className="text-red-500">*</span>
-                }
-              </label>
-              <input
+                {(key === 'API_KEY' || key === 'BASE_URL') && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
+              </Label>
+              <Input
+                id={key}
                 type="text"
                 value={value}
                 onChange={(e) => {
@@ -67,28 +76,19 @@ export const ConfigModal = ({ isOpen, onClose, onSave }: ConfigModalProps) => {
                     [key]: e.target.value
                   }));
                 }}
-                className="w-full p-2 border rounded"
                 required={key === 'API_KEY' || key === 'BASE_URL'}
               />
             </div>
           ))}
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-50"
-            >
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Save
-            </button>
-          </div>
+            </Button>
+            <Button type="submit">Save Changes</Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
-};
+}
