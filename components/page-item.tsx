@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BuilderPage } from '@/lib/types';
-import { ExternalLink, Save } from 'lucide-react';
+import { ExternalLink, Save, Globe } from 'lucide-react';
 import { EditTitle } from './edit-title';
 import { PageStatus } from './page-status';
 import { PreviewLink } from './preview-link';
@@ -15,25 +15,51 @@ import { SavePageModal } from './save-page-modal';
 interface PageItemProps {
   page: BuilderPage;
   onTitleUpdate: (id: string, title: string) => void;
+  selectedNodeId?: string | null;
+  onNodeSelect?: (nodeId: string) => void;
+  filterTerm?: string;
 }
 
-export function PageItem({ page, onTitleUpdate }: PageItemProps) {
+export function PageItem({ 
+  page, 
+  onTitleUpdate, 
+  selectedNodeId, 
+  onNodeSelect,
+  filterTerm 
+}: PageItemProps) {
   const [blocks, setBlocks] = useState(page.data.blocks || []);
+  const [filteredBlocks, setFilteredBlocks] = useState(blocks);
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiResponse, setApiResponse] = useState<any>(null);
   const { toast } = useToast();
 
-  const handleSave = async () => {
-    if (!blocks.length) {
-      toast({
-        title: "Error",
-        description: "Cannot save empty blocks",
-        variant: "destructive",
-      });
-      return;
-    }
+  useEffect(() => {
+    if (filterTerm) {
+      const filterBlocksRecursively = (blocks: any[]): any[] => {
+        return blocks.filter(block => {
+          const keepBlock = block.component?.name !== filterTerm;
+          if (block.children) {
+            block.children = filterBlocksRecursively(block.children);
+          }
+          if (block.blocks) {
+            block.blocks = filterBlocksRecursively(block.blocks);
+          }
+          return keepBlock && (
+            (block.children && block.children.length > 0) || 
+            (block.blocks && block.blocks.length > 0) ||
+            !block.children && !block.blocks
+          );
+        });
+      };
 
+      setFilteredBlocks(filterBlocksRecursively([...blocks]));
+    } else {
+      setFilteredBlocks(blocks);
+    }
+  }, [filterTerm, blocks]);
+
+  const handleSave = async () => {
     setIsSaving(true);
     try {
       const response = await updatePageBlocks(page.id, blocks, page.data);
@@ -52,51 +78,29 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
 
   const handleUpdateNode = async (nodeId: string, newData: any) => {
     try {
-      if (newData === null) {
-        // Handle node deletion
-        const filterNodes = (nodes: any[]): any[] => {
-          return nodes.filter(block => {
-            if (block.id === nodeId) return false;
-            if (block.children?.length > 0) {
-              const filteredChildren = filterNodes(block.children);
-              block.children = filteredChildren.length > 0 ? filteredChildren : undefined;
-            }
-            if (block.blocks?.length > 0) {
-              const filteredBlocks = filterNodes(block.blocks);
-              block.blocks = filteredBlocks.length > 0 ? filteredBlocks : undefined;
-            }
-            return true;
-          });
-        };
+      const updateBlocksRecursively = (blocks: any[]): any[] => {
+        return blocks.map(block => {
+          if (block.id === nodeId) {
+            return newData;
+          }
+          if (block.children?.length > 0) {
+            return {
+              ...block,
+              children: updateBlocksRecursively(block.children)
+            };
+          }
+          if (block.blocks?.length > 0) {
+            return {
+              ...block,
+              blocks: updateBlocksRecursively(block.blocks)
+            };
+          }
+          return block;
+        });
+      };
 
-        const updatedBlocks = filterNodes([...blocks]);
-        setBlocks(updatedBlocks);
-      } else {
-        // Handle node update
-        const updateBlocksRecursively = (nodes: any[]): any[] => {
-          return nodes.map(block => {
-            if (block.id === nodeId) {
-              return newData;
-            }
-            if (block.children?.length > 0) {
-              return {
-                ...block,
-                children: updateBlocksRecursively(block.children)
-              };
-            }
-            if (block.blocks?.length > 0) {
-              return {
-                ...block,
-                blocks: updateBlocksRecursively(block.blocks)
-              };
-            }
-            return block;
-          });
-        };
-
-        const updatedBlocks = updateBlocksRecursively([...blocks]);
-        setBlocks(updatedBlocks);
-      }
+      const updatedBlocks = updateBlocksRecursively([...blocks]);
+      setBlocks(updatedBlocks);
     } catch (error) {
       console.error('Failed to update node:', error);
       toast({
@@ -107,13 +111,36 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
     }
   };
 
+  const handleDeleteNode = (nodeId: string) => {
+    const filterNodes = (nodes: any[]): any[] => {
+      return nodes.filter(node => {
+        if (node.id === nodeId) return false;
+        if (node.children) node.children = filterNodes(node.children);
+        if (node.blocks) node.blocks = filterNodes(node.blocks);
+        return true;
+      });
+    };
+
+    const updatedBlocks = filterNodes([...blocks]);
+    setBlocks(updatedBlocks);
+  };
+
   return (
     <div className="group flex flex-col p-4 bg-card hover:bg-accent rounded-lg border transition-colors">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <PageStatus published={page.published} />
           <h2 className="font-medium group-hover:text-primary">
-            {page.data.title} ({page.name}) - {page.id} - {page.data.url}
+            {page.data.title} ({page.name}) - 
+            <a
+              href={`https://builder.io/content/${page.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center hover:text-primary mx-1"
+            >
+              <Globe className="h-4 w-4" />
+            </a>
+            - {page.data.url}
           </h2>
           <EditTitle
             id={page.id}
@@ -127,7 +154,7 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
             variant="outline" 
             size="sm"
             onClick={() => setIsModalOpen(true)}
-            disabled={isSaving || !blocks.length}
+            disabled={isSaving}
           >
             <Save className="h-4 w-4 mr-2" />
             Save Page
@@ -144,11 +171,14 @@ export function PageItem({ page, onTitleUpdate }: PageItemProps) {
         </div>
       </div>
 
-      {blocks?.length > 0 && (
+      {filteredBlocks?.length > 0 && (
         <div className="w-full">
           <TreeView 
-            blocks={blocks}
+            blocks={filteredBlocks}
             onUpdateNode={handleUpdateNode}
+            onDeleteNode={handleDeleteNode}
+            selectedNodeId={selectedNodeId}
+            onNodeSelect={onNodeSelect}
           />
         </div>
       )}
