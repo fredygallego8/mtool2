@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, ChevronDown, Layout, Image as ImageIcon, Type, Columns, Link, Code, Trash2, Settings } from 'lucide-react';
+import { ChevronRight, ChevronDown, Layout, Image as ImageIcon, Type, Columns, Code, Settings, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
   ContextMenu,
@@ -9,17 +9,41 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { CodeModal } from './code-modal';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface TreeNodeProps {
   node: any;
   level?: number;
+  onUpdate?: (nodeId: string, newData: any) => Promise<void>;
+  onDelete?: (nodeId: string) => void;
+  selectedNodeId?: string;
+  onNodeSelect?: (nodeId: string) => void;
 }
 
-export function TreeNode({ node, level = 0 }: TreeNodeProps) {
+export function TreeNode({ 
+  node, 
+  level = 0, 
+  onUpdate, 
+  onDelete,
+  selectedNodeId,
+  onNodeSelect 
+}: TreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [isDeleted, setIsDeleted] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
-  
+  const [isHovered, setIsHovered] = useState(false);
+
+  const hasChildren = node.children?.length > 0 || node.blocks?.length > 0;
+  const children = node.children || node.blocks || [];
+
+  const tagName = node.tagName === "img" ? "Image" : node.tagName;
+  const name = node.component?.name === "Core:Section" ? "Section" : node.component?.name ||  node.layerName || node.name || tagName || 'Box';
+  const displayName = node.layerName || name || node.name || tagName || 'Unnamed Component';
+
+  const isTextComponent = displayName === 'Text';
+  const textContent = isTextComponent ? node.component?.options?.text?.replace(/<[^>]*>/g, '') : null;
+  const isSelected = selectedNodeId === node.id;
+
   const getIcon = (displayName: string) => {
     switch (displayName) {
       case 'Box':
@@ -37,67 +61,94 @@ export function TreeNode({ node, level = 0 }: TreeNodeProps) {
     }
   };
 
-  const handleShowCode = () => {
-    setIsCodeModalOpen(true);
-  };
-
-  const handleDelete = () => {
-    setIsDeleted(true);
-  };
-
-  const handleDeleteInAllPages = () => {
-    console.log('Delete in all pages:', node);
-    setIsDeleted(true);
-  };
-
-  const hasChildren = node.children?.length > 0 || node.blocks?.length > 0;
-  const children = node.children || node.blocks || [];
-  const tagName = node.tagName === "img" ? "Image" : node.tagName;
-  const name = node.component?.name === "Core:Section" ? "Section" : node.component?.name ||  node.layerName || node.name || tagName || 'Box';
-  const displayName = node.layerName || name || node.name || tagName || 'Unnamed Component';
-
   return (
-    <div className={`w-full ${isDeleted ? 'bg-red-100' : ''}`}>
+    <div className="w-full">
       <ContextMenu>
         <ContextMenuTrigger>
           <div 
-            className="flex items-center gap-1 hover:bg-accent rounded-md px-2 py-1 cursor-pointer"
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 cursor-pointer rounded-md transition-colors group/item",
+              isSelected && "bg-primary/10 hover:bg-primary/20",
+              isHovered && !isSelected && "bg-accent",
+              !isHovered && !isSelected && "hover:bg-accent"
+            )}
             style={{ paddingLeft: `${level * 16}px` }}
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onNodeSelect) {
+                onNodeSelect(node.id);
+              }
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
           >
-            {hasChildren && (
-              <button className="p-1 hover:bg-accent rounded-md">
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center flex-1">
+              {hasChildren && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-0 h-4 w-4 hover:bg-transparent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(!isExpanded);
+                  }}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              
+              {getIcon(displayName)}
+              
+              <div className="flex flex-col ml-2">
+                <span className="text-sm">
+                  {displayName}
+                </span>
+                {textContent && (
+                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    {textContent}
+                  </span>
                 )}
-              </button>
-            )}
-            
-            {getIcon(displayName)}
-            
-            <span className="text-sm">
-              {displayName}
-            </span>
-            
-            {node.linkUrl && (
-              <Link className="h-3 w-3 text-blue-500 ml-1" />
-            )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsCodeModalOpen(true);
+                }}
+              >
+                <Code className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(node.id);
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={handleShowCode}>
+          <ContextMenuItem onClick={() => setIsCodeModalOpen(true)}>
             <Code className="mr-2 h-4 w-4" />
-            Show Code
+            Edit JSON
           </ContextMenuItem>
-          <ContextMenuItem onClick={handleDelete}>
+          <ContextMenuItem onClick={() => onDelete?.(node.id)} className="text-red-600">
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
-          </ContextMenuItem>
-          <ContextMenuItem onClick={handleDeleteInAllPages}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete in All Pages
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -106,16 +157,21 @@ export function TreeNode({ node, level = 0 }: TreeNodeProps) {
         isOpen={isCodeModalOpen}
         onClose={() => setIsCodeModalOpen(false)}
         code={JSON.stringify(node, null, 2)}
-        title={`Code for ${displayName}`}
+        title={`Edit ${displayName}`}
+        onSave={(newCode) => onUpdate?.(node.id, JSON.parse(newCode))}
       />
 
       {isExpanded && hasChildren && (
         <div className="w-full">
-          {children.map((child: any, index: number) => (
+          {children.map((child: any) => (
             <TreeNode 
-              key={child.id || index} 
-              node={child} 
-              level={level + 1} 
+              key={child.id || `${node.id}-${Math.random()}`}
+              node={child}
+              level={level + 1}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              selectedNodeId={selectedNodeId}
+              onNodeSelect={onNodeSelect}
             />
           ))}
         </div>
