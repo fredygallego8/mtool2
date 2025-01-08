@@ -10,9 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 interface JsonPreviewProps {
   data: any;
   onUpdate?: (newData: any) => Promise<void>;
+  pageId?: string;
+  onBlocksUpdate?: (pageId: string, blocks: any[]) => void;
 }
 
-export function JsonPreview({ data, onUpdate }: JsonPreviewProps) {
+export function JsonPreview({ data, onUpdate, pageId, onBlocksUpdate }: JsonPreviewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [jsonContent, setJsonContent] = useState('');
   const { toast } = useToast();
@@ -27,6 +29,9 @@ export function JsonPreview({ data, onUpdate }: JsonPreviewProps) {
       const parsedJson = JSON.parse(jsonContent);
       if (onUpdate) {
         await onUpdate(parsedJson);
+        if (pageId && onBlocksUpdate) {
+          onBlocksUpdate(pageId, parsedJson);
+        }
         setIsEditing(false);
         toast({
           title: "Success",

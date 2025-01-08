@@ -9,39 +9,70 @@ interface TreeViewProps {
   blocks: any[];
   onUpdateNode?: (nodeId: string, newData: any) => Promise<void>;
   onDeleteNode?: (nodeId: string) => void;
+  selectedNodeId?: string;
+  onNodeSelect?: (nodeId: string) => void;
+  pageId?: string;
+  onBlocksUpdate?: (pageId: string, blocks: any[]) => void;
 }
 
-export function TreeView({ blocks, onUpdateNode, onDeleteNode }: TreeViewProps) {
-  const [localBlocks, setLocalBlocks] = useState(blocks);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
+export function TreeView({ 
+  blocks: initialBlocks, 
+  onUpdateNode, 
+  onDeleteNode,
+  selectedNodeId,
+  onNodeSelect,
+  pageId,
+  onBlocksUpdate
+}: TreeViewProps) {
+  const [localBlocks, setLocalBlocks] = useState(initialBlocks);
+  const [selectedNode, setSelectedNode] = useState<any>(null);
 
-  // Update local blocks when props change
   useEffect(() => {
-    setLocalBlocks(blocks);
-  }, [blocks]);
+    setLocalBlocks(initialBlocks);
+  }, [initialBlocks]);
+
+  useEffect(() => {
+    if (selectedNodeId) {
+      const node = findNodeById(localBlocks, selectedNodeId);
+      setSelectedNode(node);
+    } else {
+      setSelectedNode(null);
+    }
+  }, [selectedNodeId, localBlocks]);
 
   const handleNodeSelect = (nodeId: string) => {
-    setSelectedNodeId(nodeId);
-  };
-
-  const handleDeleteNode = (nodeId: string) => {
-    if (onDeleteNode) {
-      onDeleteNode(nodeId);
+    if (onNodeSelect) {
+      onNodeSelect(nodeId);
     }
-    setSelectedNodeId(undefined);
   };
-
-  const selectedNode = selectedNodeId ? 
-    findNodeById(localBlocks, selectedNodeId) : 
-    null;
 
   const handleJsonUpdate = async (newData: any) => {
     if (!selectedNodeId || !onUpdateNode) return;
     
     try {
       await onUpdateNode(selectedNodeId, newData);
+      // Update local blocks to reflect changes
+      const updatedBlocks = updateBlocksWithNewData(localBlocks, selectedNodeId, newData);
+      setLocalBlocks(updatedBlocks);
+      // Notify parent about blocks update
+      if (pageId && onBlocksUpdate) {
+        onBlocksUpdate(pageId, updatedBlocks);
+      }
     } catch (error) {
       console.error('Failed to update JSON:', error);
+    }
+  };
+
+  const handleDeleteNode = (nodeId: string) => {
+    if (!onDeleteNode) return;
+    
+    onDeleteNode(nodeId);
+    // Update local blocks after deletion
+    const updatedBlocks = deleteNodeFromBlocks(localBlocks, nodeId);
+    setLocalBlocks(updatedBlocks);
+    // Notify parent about blocks update
+    if (pageId && onBlocksUpdate) {
+      onBlocksUpdate(pageId, updatedBlocks);
     }
   };
 
@@ -57,7 +88,7 @@ export function TreeView({ blocks, onUpdateNode, onDeleteNode }: TreeViewProps) 
               <TreeNode 
                 key={block.id || `${block.component?.name}-${Math.random()}`}
                 node={block}
-                onUpdate={onUpdateNode}
+                onUpdate={handleJsonUpdate}
                 onDelete={handleDeleteNode}
                 selectedNodeId={selectedNodeId}
                 onNodeSelect={handleNodeSelect}
@@ -70,6 +101,8 @@ export function TreeView({ blocks, onUpdateNode, onDeleteNode }: TreeViewProps) 
       <JsonPreview 
         data={selectedNode || localBlocks} 
         onUpdate={handleJsonUpdate}
+        pageId={pageId}
+        onBlocksUpdate={onBlocksUpdate}
       />
     </div>
   );
@@ -90,4 +123,43 @@ function findNodeById(blocks: any[], id: string): any {
     }
   }
   return null;
+}
+
+function updateBlocksWithNewData(blocks: any[], id: string, newData: any): any[] {
+  return blocks.map(block => {
+    if (block.id === id) {
+      return newData;
+    }
+    
+    if (block.children?.length) {
+      return {
+        ...block,
+        children: updateBlocksWithNewData(block.children, id, newData)
+      };
+    }
+    
+    if (block.blocks?.length) {
+      return {
+        ...block,
+        blocks: updateBlocksWithNewData(block.blocks, id, newData)
+      };
+    }
+    
+    return block;
+  });
+}
+
+function deleteNodeFromBlocks(blocks: any[], id: string): any[] {
+  return blocks.filter(block => {
+    if (block.id === id) return false;
+    
+    if (block.children?.length) {
+      block.children = deleteNodeFromBlocks(block.children, id);
+    }
+    if (block.blocks?.length) {
+      block.blocks = deleteNodeFromBlocks(block.blocks, id);
+    }
+    
+    return true;
+  });
 }

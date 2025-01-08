@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getStoredUrlFilters, saveUrlFilters } from "@/lib/storage/filters";
 
 interface UrlFilterModalProps {
   isOpen: boolean;
@@ -20,11 +21,20 @@ interface UrlFilterModalProps {
 export function UrlFilterModal({ isOpen, onClose, onFilter }: UrlFilterModalProps) {
   const [urls, setUrls] = useState('');
 
+  useEffect(() => {
+    if (isOpen) {
+      const storedUrls = getStoredUrlFilters();
+      setUrls(storedUrls.join('\n'));
+    }
+  }, [isOpen]);
+
   const handleFilter = () => {
     const urlList = urls
       .split('\n')
       .map(url => url.trim())
       .filter(url => url.length > 0);
+    
+    saveUrlFilters(urlList);
     onFilter(urlList);
     onClose();
   };

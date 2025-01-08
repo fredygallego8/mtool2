@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BuilderPage } from '@/lib/types';
 import { ExternalLink, Save, Globe } from 'lucide-react';
 import { EditTitle } from './edit-title';
@@ -18,6 +18,7 @@ interface PageItemProps {
   selectedNodeId?: string | null;
   onNodeSelect?: (nodeId: string) => void;
   filterTerm?: string;
+  onBlocksUpdate?: (pageId: string, blocks: any[]) => void;
 }
 
 export function PageItem({ 
@@ -25,7 +26,8 @@ export function PageItem({
   onTitleUpdate, 
   selectedNodeId, 
   onNodeSelect,
-  filterTerm 
+  filterTerm,
+  onBlocksUpdate 
 }: PageItemProps) {
   const [blocks, setBlocks] = useState(page.data.blocks || []);
   const [filteredBlocks, setFilteredBlocks] = useState(blocks);
@@ -34,6 +36,12 @@ export function PageItem({
   const [apiResponse, setApiResponse] = useState<any>(null);
   const { toast } = useToast();
 
+  // Update blocks when page data changes
+  useEffect(() => {
+    setBlocks(page.data.blocks || []);
+  }, [page.data.blocks]);
+
+  // Apply filter without notifying parent immediately
   useEffect(() => {
     if (filterTerm) {
       const filterBlocksRecursively = (blocks: any[]): any[] => {
@@ -53,17 +61,28 @@ export function PageItem({
         });
       };
 
-      setFilteredBlocks(filterBlocksRecursively([...blocks]));
+      const filtered = filterBlocksRecursively([...blocks]);
+      setFilteredBlocks(filtered);
     } else {
       setFilteredBlocks(blocks);
     }
   }, [filterTerm, blocks]);
 
+  // Notify parent of block changes separately
+  useEffect(() => {
+    onBlocksUpdate?.(page.id, filteredBlocks);
+  }, [filteredBlocks, page.id, onBlocksUpdate]);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const response = await updatePageBlocks(page.id, blocks, page.data);
+      const blocksToSave = filterTerm ? filteredBlocks : blocks;
+      const response = await updatePageBlocks(page.id, blocksToSave, page.data);
       setApiResponse(response);
+      toast({
+        title: "Success",
+        description: "Page saved successfully",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -179,6 +198,8 @@ export function PageItem({
             onDeleteNode={handleDeleteNode}
             selectedNodeId={selectedNodeId}
             onNodeSelect={onNodeSelect}
+            pageId={page.id}
+            onBlocksUpdate={onBlocksUpdate}
           />
         </div>
       )}

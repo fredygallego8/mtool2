@@ -11,52 +11,59 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, Code } from "lucide-react";
 import { CodeModal } from './builder-tree/code-modal';
+import { updatePageBlocks } from '@/lib/api/builder';
 
 interface PageSaveStatus {
   pageId: string;
   title: string;
   status: 'pending' | 'success' | 'error';
   error?: string;
+  blocks?: any[];
   response?: any;
 }
 
 interface SaveAllPagesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  pages: Array<{ id: string; data: { title: string } }>;
-  onSave: (pageId: string) => Promise<void>;
+  pages: Array<{ id: string; data: { title: string; blocks: any[] } }>;
+  modifiedBlocks: Record<string, any[]>;
 }
 
-export function SaveAllPagesModal({ isOpen, onClose, pages, onSave }: SaveAllPagesModalProps) {
+export function SaveAllPagesModal({ isOpen, onClose, pages, modifiedBlocks }: SaveAllPagesModalProps) {
   const [saveStatuses, setSaveStatuses] = useState<PageSaveStatus[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedResponse, setSelectedResponse] = useState<{ title: string; data: any } | null>(null);
+  const [selectedJson, setSelectedJson] = useState<{ title: string; data: any } | null>(null);
 
   const startSaving = async () => {
     setIsSaving(true);
+    // Initialize statuses with blocks that will be saved
     const initialStatuses = pages.map(page => ({
       pageId: page.id,
       title: page.data.title,
-      status: 'pending' as const
+      status: 'pending' as const,
+      blocks: modifiedBlocks[page.id] || page.data.blocks
     }));
     setSaveStatuses(initialStatuses);
 
-    for (const page of pages) {
+    for (const status of initialStatuses) {
       try {
-        const response = await onSave(page.id);
+        const page = pages.find(p => p.id === status.pageId)!;
+        const blocksToSave = status.blocks || page.data.blocks;
+        
+        const response = await updatePageBlocks(status.pageId, blocksToSave, page.data);
         setSaveStatuses(prev => 
-          prev.map(status => 
-            status.pageId === page.id 
-              ? { ...status, status: 'success', response }
-              : status
+          prev.map(s => 
+            s.pageId === status.pageId 
+              ? { ...s, status: 'success', response }
+              : s
           )
         );
       } catch (error) {
         setSaveStatuses(prev => 
-          prev.map(status => 
-            status.pageId === page.id 
-              ? { ...status, status: 'error', error: error instanceof Error ? error.message : 'Failed to save' }
-              : status
+          prev.map(s => 
+            s.pageId === status.pageId 
+              ? { ...s, status: 'error', error: error instanceof Error ? error.message : 'Failed to save' }
+              : s
           )
         );
       }
@@ -73,6 +80,20 @@ export function SaveAllPagesModal({ isOpen, onClose, pages, onSave }: SaveAllPag
       case 'error':
         return <XCircle className="h-4 w-4 text-red-500" />;
     }
+  };
+
+  const viewBlocks = (status: PageSaveStatus) => {
+    setSelectedJson({
+      title: `Blocks to Save - ${status.title}`,
+      data: status.blocks || []
+    });
+  };
+
+  const viewResponse = (status: PageSaveStatus) => {
+    setSelectedJson({
+      title: `API Response - ${status.title}`,
+      data: status.response
+    });
   };
 
   return (
@@ -99,17 +120,24 @@ export function SaveAllPagesModal({ isOpen, onClose, pages, onSave }: SaveAllPag
                   {status.error && (
                     <span className="text-sm text-red-600">{status.error}</span>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => viewBlocks(status)}
+                    title="View blocks to be saved"
+                  >
+                    <Code className="h-4 w-4" />
+                  </Button>
                   {status.response && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
-                      onClick={() => setSelectedResponse({ 
-                        title: status.title,
-                        data: status.response 
-                      })}
+                      onClick={() => viewResponse(status)}
+                      title="View API response"
                     >
-                      <Code className="h-4 w-4" />
+                      <CheckCircle2 className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
@@ -130,12 +158,12 @@ export function SaveAllPagesModal({ isOpen, onClose, pages, onSave }: SaveAllPag
         </DialogContent>
       </Dialog>
 
-      {selectedResponse && (
+      {selectedJson && (
         <CodeModal
           isOpen={true}
-          onClose={() => setSelectedResponse(null)}
-          code={JSON.stringify(selectedResponse.data, null, 2)}
-          title={`API Response - ${selectedResponse.title}`}
+          onClose={() => setSelectedJson(null)}
+          code={JSON.stringify(selectedJson.data, null, 2)}
+          title={selectedJson.title}
         />
       )}
     </>
